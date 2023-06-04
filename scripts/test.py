@@ -1,61 +1,41 @@
-import openai
-import os
-import sys
-sys.path.append('Human.py')
+from bs4 import BeautifulSoup
+import requests
 
-from secrets import CHAT_GPT_KEY
+URLS = [
+'https://acsjournals.onlinelibrary.wiley.com/doi/epdf/10.1002/%28SICI%291097-0142%2819970615%2979%3A12%3C2396%3A%3AAID-CNCR15%3E3.0.CO%3B2-M',
+'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2247100/pdf/brjcancer00120-0090.pdf',
+'https://onlinelibrary.wiley.com/doi/full/10.1002/ijc.20434',
+'https://acsjournals.onlinelibrary.wiley.com/doi/10.1002/%28SICI%291097-0142%2819970615%2979%3A12%3C2396%3A%3AAID-CNCR15%3E3.0.CO%3B2-M',
+'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4820665/',
+'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9360263/',
+'https://pubmed.ncbi.nlm.nih.gov/31910280/',
+]
 
-DOC = """
+def extract_html_from_url(url):
+    req = requests.get(url, 'html.parser', headers={
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'})
+    if req.status_code == 200:
+        # Get the content of the response
+        page_content = req.content
 
-"""
+        # Create a BeautifulSoup object and specify the parser
+        soup = BeautifulSoup(page_content, 'html.parser')
+        # Find the section element with role='document'
 
-def chatGPT_extract_Methods():
-    openai.api_key = CHAT_GPT_KEY 
+        section = soup.find('section', attrs={'role':'document'})
 
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt="Q:In this text passage which is a scientific methods description, give me bullet points for the study design, Method of Talcum Powder Exposure Measurement, Length of Follow-Up, and number of subjects studied" + DOC + " \nA:",
-        temperature=0,
-        max_tokens=100,
-        top_p=1,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-    )
-
-    response["choices"][0]["text"]
-
-
-def chatGPT_extract_results():
-    openai.api_key = CHAT_GPT_KEY 
-
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt="Q:In this text passage which is a scientific results, first provide a short summary of the conclusion of the results, then provide bullet points for the Risk Ratios or odds ratio or similar important results, Statistical Significance:" + DOC + " \nA:",
-        temperature=0,
-        max_tokens=500,
-        top_p=1,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-    )
-
-    return response["choices"][0]["text"]
+        # Print the text within this section
+        if section:
+            print(section)
+        else:
+            print("No section with role='document' found.")
+    else:
+        print("Failed to retrieve the URL")
 
 
-def chatGPT_test():
-    openai.api_key = CHAT_GPT_KEY 
 
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt="Q: what color is the sky \nA:",
-        temperature=0,
-        max_tokens=10,
-        top_p=1,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-    )
+def main():
+    extract_html_from_url(URLS[6])
+    print()
 
-    return response["choices"][0]["text"]
-
-chatGPT_test()
-#chatGPT_extract_results()
-#chatGPT_extract_Methods()
+main()

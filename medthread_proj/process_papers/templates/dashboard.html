@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Research Dashboard</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+        }
+        .container {
+            padding: 50px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 50px;
+        }
+        th, td {
+            text-align: left;
+            padding: 16px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #000000;
+            color: white;
+        }
+        .home-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #000000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #1f2224;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Research Dashboard</h1>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Year of Publication</th>
+                <th>Independent Variable</th>
+                <th>Dependent Variable</th>
+                <th>Conclusion</th>
+                <th>Relevance</th>
+            </tr>
+            <!-- Repeat this row block for each article -->
+            <tr>
+                <td>Article 1</td>
+                <td>2023</td>
+                <td>Variable A</td>
+                <td>Variable B</td>
+                <td>Lorem ipsum dolor sit amet...</td>
+                <td>High</td>
+            </tr>
+            <!-- End of row block -->
+        </table>
+        <button class="home-button" onclick="goHome()">Home</button>
+    </div>
+    <script>
+        function goHome() {
+            // Replace with your actual home page URL
+            window.location.href = "/";
+        }
+    </script>
+</body>
+</html>
+

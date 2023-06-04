@@ -1,9 +1,9 @@
-from datetime import datetime
 import re
 import fitz
 import os
-import requests
 import openai
+
+from secrets import CHAT_GPT_KEY
 
 
 PDFS = [
@@ -11,12 +11,13 @@ PDFS = [
     'brjcancer00120-0090.pdf',
     'Cancer - 2000 - Chang - Perineal talc exposure and risk of ovarian carcinoma.pdf',
     'ede-27-334.pdf',
-    'In re Johnson & Johnson Talcum Powder Prods. Mktg., Sales Practices & Prods. Litig.pdf',
     'Intl Journal of Cancer - 2004 - Mills - Perineal talc exposure and epithelial ovarian cancer risk in the Central Valley of.pdf',
 ]
 
-PDF_FOLDER = os.path.dirname('/Users/liamgordon/Desktop/medthread_proj/research/')
-doc_path = fitz.open(PDF_FOLDER + '/' + PDFS[0])
+
+PDF_FOLDER = os.path.dirname('/Users/liamgordon/Desktop/medthread_proj/medthread_proj/process_papers/research/')
+doc_path = fitz.open(PDF_FOLDER + '/' + PDFS[4])
+
 
 def extract_pdf_data(doc_path):
     with fitz.open(doc_path) as doc:  # open document
@@ -27,22 +28,21 @@ def extract_pdf_data(doc_path):
         year = date_time_str[2:6]
 
         doc_metadata = {'title': title, 'author': author, 'year_published': year}
-        pages = []
-        for page_num in range(doc.page_count):
-            page = doc.load_page(page_num)  # loads page number 'pno' of the document (0-based)
-            page.get_text("text")
-            pages.append(page.get_text("text"))
 
-    pages = ' '.join(pages)
-    return pages, doc_metadata
+        text_block = []
+        for page in doc:
+            text = page.get_text("blocks")
+            for block in text:
+               text_block.append(block[4])
+
+    text_block = ' '.join(text_block)
+    return text_block, doc_metadata
 
 
-def match_text_chunks(doc_path):
-    pages, _ = extract_pdf_data(doc_path)
-
+def match_text_chunks(pages):
     re_key_words_method = r'\n\s*((MATERIALS AND METHODS)|(MATERIALS AND METHODS)|(METHODS)|(Subjects and methods))\s*\n'
     re_key_words_results = r'\n\s*((CONCLUSIONS)|(RESULTS)|(Results)|(Conclusions and relevance))(\:)?\n\s*'
-    re_section_break = r'\n(([A-Z]{5,10}){1,3})(\:)?\n'
+    re_section_break = r'\n\s*(([A-Z]{5,10}){1,3})|(References)|(Discussion)|(Methods)|(Results)(\:)?\s*\n'
 
     method_sentences = []
     result_sentences = []
@@ -71,10 +71,95 @@ def match_text_chunks(doc_path):
     return result_sentences, method_sentences
 
 
+def chatGPT_extract_methods(methods_text):
+    openai.api_key = CHAT_GPT_KEY
+
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt="""Q:In this text passage which is a scientific methods description,
+         return a python dictionary for the study design, Method of Talcum Powder Exposure Measurement,
+         Length of Follow-Up, Dependant variable, Independant Variable and number of subjects studied
+         """ + methods_text + " \nA:",
+        temperature=0,
+        max_tokens=250,
+        top_p=1,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+    )
+
+    return response["choices"][0]["text"]
+
+
+def chatGPT_extract_results(results_text):
+    openai.api_key = CHAT_GPT_KEY
+
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt="""
+        Q:In this text passage which is a scientific results, return a python dictionary with a short summary of the conclusion of
+         the results, the Risk Ratio and its p value, and the odds ratio and its p value
+        """ + results_text + " \nA:",
+        temperature=0,
+        max_tokens=500,
+        top_p=1,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+    )
+
+    return response["choices"][0]["text"]
+
+
+def chatGPT_test(methods_text):
+    openai.api_key = CHAT_GPT_KEY
+
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt="Q: what color is the sky \nA:",
+        temperature=0,
+        max_tokens=10,
+        top_p=1,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+    )
+
+    return response["choices"][0]["text"]
+
+
 def main():
     pages, doc_metadata = extract_pdf_data(doc_path)
-    result_sentences, method_sentences = match_text_chunks(doc_path)
-
+    result_sentences, method_sentences = match_text_chunks(pages)
+    print(method_sentences)
+    print()
+    print()
+    print()
     print(result_sentences)
 
+    method_related_extracts = chatGPT_extract_methods(method_sentences)
+    result_related_extracts = chatGPT_extract_results(result_sentences)
+
+    print()
+    print()
+    print(doc_metadata)
+    print(method_related_extracts)
+    print(result_related_extracts)
+
+
 main()
+
+
+
+
+
+
+"""
+{'title': 'Association Between the Frequent Use of Perineal Talcum Powder Products and Ovarian Cancer: a Systematic Review and Meta-analysis', 'author': 'Sean A Woolen', 'year_published': '2022'}
+ {'Study Design': 'Observational cohort and case-control study designs',
+    'Method of Talcum Powder Exposure Measurement': 'Multiple (2 or more) times per week perineal exposure to talc',
+    'Length of Follow-Up': 'Inception of the relevant databases to August 2, 2021',
+    'Dependant Variable': 'Ovarian malignancy',
+    'Independant Variable': 'Frequent perineal exposure to talc',
+    'Number of Subjects Studied': '11 articles'}
+ {'Conclusion': 'The summary pooled odds ratio assessing the association between frequent use of perineal talcum powder products and ovarian cancer was 1.47 (P<0.0001, 95% CI 1.31, 1.65)',
+    'Risk Ratio': {'Value': 1.47, 'p-value': 0.0001},
+    'Odds Ratio': {'Value': 1.44, 'p-value': 0.0001}}
+"""

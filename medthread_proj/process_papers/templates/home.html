@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Landing Page</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            text-align: center;
+        }
+        input[type="url"] {
+            width: 50%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #040506;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1f2224;
+        }
+        .dash-button {
+            position: fixed;
+            top: 20px;
+            right: 40px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the MedThread AI Processing Center!</h1>
+        <p><i>Please input a URL to process</i></p>
+        <input type="url" id="url" name="url" placeholder="https://example.com">
+        <button onclick="submitUrl()">Submit</button>
+        <button class="dash-button" onclick="goDash()">Dashboard</button>
+    </div>
+
+    <script>
+        function submitUrl() {
+            var url = document.getElementById("url").value;
+            if (url) {
+                alert("URL submitted: " + url);
+            } else {
+                alert("Please enter a URL.");
+            }
+        }
+
+        function goDash() {
+            // Replace with your actual home page URL
+            window.location.href = "/dashboard/";
+        }
+    </script>
+</body>
+</html>
