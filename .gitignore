@@ -1,2 +1,4 @@
 secrets.py
 secrets.cpython-311.pyc
+medthread_proj/medthread_proj/settings.py
+medthread_proj/process_papers/local_secrets.py

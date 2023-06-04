@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
+import mysql.connector
 
 URLS = [
 'https://acsjournals.onlinelibrary.wiley.com/doi/epdf/10.1002/%28SICI%291097-0142%2819970615%2979%3A12%3C2396%3A%3AAID-CNCR15%3E3.0.CO%3B2-M',
@@ -35,7 +36,8 @@ def extract_html_from_url(url):
 
 
 def main():
-    extract_html_from_url(URLS[6])
+    #extract_html_from_url(URLS[6])
     print()
+    print(dashboard())
 
 main()

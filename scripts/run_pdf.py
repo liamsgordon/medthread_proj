@@ -1,7 +1,10 @@
+import ast
+import json
 import re
 import fitz
 import os
 import openai
+import mysql.connector
 
 from secrets import CHAT_GPT_KEY
 
@@ -16,7 +19,7 @@ PDFS = [
 
 
 PDF_FOLDER = os.path.dirname('/Users/liamgordon/Desktop/medthread_proj/medthread_proj/process_papers/research/')
-doc_path = fitz.open(PDF_FOLDER + '/' + PDFS[4])
+doc_path = fitz.open(PDF_FOLDER + '/' + PDFS[0])
 
 
 def extract_pdf_data(doc_path):
@@ -27,7 +30,7 @@ def extract_pdf_data(doc_path):
         date_time_str = doc_metadata.get('creationDate')
         year = date_time_str[2:6]
 
-        doc_metadata = {'title': title, 'author': author, 'year_published': year}
+        doc_metadata = {'title': title, 'author': author, 'year_pub': year}
 
         text_block = []
         for page in doc:
@@ -109,12 +112,12 @@ def chatGPT_extract_results(results_text):
     return response["choices"][0]["text"]
 
 
-def chatGPT_test(methods_text):
+def chatGPT_test_IV_DV(ind_var, dep_var):
     openai.api_key = CHAT_GPT_KEY
 
     response = openai.Completion.create(
         model="text-davinci-003",
-        prompt="Q: what color is the sky \nA:",
+        prompt="Q: return either yes or no if this Independant variable " + ind_var + " and this " + dep_var + " roughly investigates the impact of talcum powder on cancer risk? \nA:",
         temperature=0,
         max_tokens=10,
         top_p=1,
@@ -122,44 +125,85 @@ def chatGPT_test(methods_text):
         presence_penalty=0.0,
     )
 
+    bool_text = response["choices"][0]["text"].strip()
+    if bool_text in ('Yes', 'yes'):
+        return True
     return response["choices"][0]["text"]
+
+
+def conn():
+    mydb = mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password='liam1521',
+        database="medthread"
+    )
+
+    return mydb
+
+
+def meta_analysis_relavance(results_dict):
+    if not results_dict['risk_ratio_value'] and not results_dict['odds_ratio_value']:
+        return False
+    elif results_dict['risk_ratio_p'] > 0.05 and results_dict['odds_ratio_p'] > 0.05:
+        return False
+    elif not results_dict['ind_var'] or not results_dict['dep_var']:
+        return False
+    print(chatGPT_test_IV_DV(results_dict['ind_var'], results_dict['dep_var']))
+    return True
 
 
 def main():
     pages, doc_metadata = extract_pdf_data(doc_path)
     result_sentences, method_sentences = match_text_chunks(pages)
-    print(method_sentences)
-    print()
-    print()
-    print()
-    print(result_sentences)
 
     method_related_extracts = chatGPT_extract_methods(method_sentences)
     result_related_extracts = chatGPT_extract_results(result_sentences)
 
-    print()
-    print()
-    print(doc_metadata)
-    print(method_related_extracts)
-    print(result_related_extracts)
+    method_result = ast.literal_eval(method_related_extracts)
+    result_result = ast.literal_eval(result_related_extracts)
+
+    adjusted_methods = {
+        'study_design': method_result['Study Design'],
+        'method_of_talcum_powder_exposure_measurement': method_result['Method of Talcum Powder Exposure Measurement'],
+        'length_of_follow_up': method_result['Length of Follow-Up'],
+        'dep_var': method_result['Dependant Variable'],
+        'ind_var': method_result['Independant Variable'],
+        'number_of_subjects_studied': method_result['Number of Subjects Studied'],
+    }
+
+    adjusted_results = {
+        'conclusion': result_result['Conclusion'],
+        'risk_ratio_value': result_result['Risk Ratio']['Value'],
+        'odds_ratio_value': result_result['Odds Ratio']['Value'],
+        'risk_ratio_p': result_result['Risk Ratio']['p-value'],
+        'odds_ratio_p': result_result['Odds Ratio']['p-value'],
+    }
+
+    results = doc_metadata | adjusted_methods | adjusted_results
+
+    mydb = conn()
+    cursor = mydb.cursor()
+
+    relevance = meta_analysis_relavance(results)
+    results['relavance'] = relevance
+
+
+
+
+    sql = """
+    INSERT INTO ResearchArticle (title, author, year_pub, study_design,
+        method_of_talcum_powder_exposure_measurement, length_of_follow_up,
+        dep_var, ind_var, number_of_subjects_studied, conclusion,
+        risk_ratio_value, odds_ratio_value, risk_ratio_p,
+        odds_ratio_p, relevance) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """
+
+    cursor.execute(sql, list(results.values()))
+    mydb.commit()
+    mydb.close()
+
+
 
 
 main()
-
-
-
-
-
-
-"""
-{'title': 'Association Between the Frequent Use of Perineal Talcum Powder Products and Ovarian Cancer: a Systematic Review and Meta-analysis', 'author': 'Sean A Woolen', 'year_published': '2022'}
- {'Study Design': 'Observational cohort and case-control study designs',
-    'Method of Talcum Powder Exposure Measurement': 'Multiple (2 or more) times per week perineal exposure to talc',
-    'Length of Follow-Up': 'Inception of the relevant databases to August 2, 2021',
-    'Dependant Variable': 'Ovarian malignancy',
-    'Independant Variable': 'Frequent perineal exposure to talc',
-    'Number of Subjects Studied': '11 articles'}
- {'Conclusion': 'The summary pooled odds ratio assessing the association between frequent use of perineal talcum powder products and ovarian cancer was 1.47 (P<0.0001, 95% CI 1.31, 1.65)',
-    'Risk Ratio': {'Value': 1.47, 'p-value': 0.0001},
-    'Odds Ratio': {'Value': 1.44, 'p-value': 0.0001}}
-"""
