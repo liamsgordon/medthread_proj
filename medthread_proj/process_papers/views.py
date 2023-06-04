@@ -2,7 +2,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 import mysql.connector
 
-from . import local_secrets
+from .local_secrets import LOCAL_PW
 
 
 # Create your views here.
@@ -69,7 +69,7 @@ def conn():
     mydb = mysql.connector.connect(
         host="127.0.0.1",
         user="root",
-        password='liam1521',
+        password=LOCAL_PW,
         database="medthread"
     )
 
