@@ -82,13 +82,16 @@ def match_text_chunks(pages):
         if result_stop is False:
             result_sentences.append(sentence)
 
-    result_sentences = ' '.join(result_sentences)
+    new_result_sentences = []
+    for sentence in result_sentences:
+        num_lines = len(sentence.split('\n'))
+        if num_lines < 4:
+            new_result_sentences.append(sentence)
+
+    result_sentences = ' '.join(new_result_sentences)
     method_sentences = ' '.join(method_sentences)
-    print(method_sentences)
-    print()
-    print()
-    print()
-    print(result_sentences)
+
+
     return result_sentences, method_sentences
 
 
@@ -118,7 +121,7 @@ def chatGPT_extract_results(results_text):
         model="text-davinci-003",
         prompt="""
         Q:In this text passage which is a scientific results, return a python dictionary with a short summary of the conclusion of
-         the results, the Risk Ratio, Risk Ratio p value, odds ratio, and odds ratio p value
+         the results, the Risk Ratio (as a float), Risk Ratio p value, Odds Ratio (as a float), and odds Ratio p value
         """ + results_text + " \nA:",
         temperature=0,
         max_tokens=500,
@@ -164,9 +167,6 @@ def insert_results(results):
     mydb = conn()
     cursor = mydb.cursor()
 
-    relevance = meta_analysis_relavance(results)
-    results['relavance'] = relevance
-
     sql = """
     INSERT INTO ResearchArticle (title, author, year_pub, study_design,
         method_of_talcum_powder_exposure_measurement, length_of_follow_up,
@@ -180,10 +180,14 @@ def insert_results(results):
     mydb.close()
 
 
-def meta_analysis_relavance(results_dict):
+def meta_analysis_relevance(results_dict):
     if not results_dict['risk_ratio_value'] and not results_dict['odds_ratio_value']:
         return False
-    elif results_dict['risk_ratio_p'] > 0.05 and results_dict['odds_ratio_p'] > 0.05:
+    elif not results_dict['risk_ratio_p'] and not results_dict['odds_ratio_p']:
+        return False
+    elif (results_dict['risk_ratio_p'] and not results_dict['odds_ratio_p'] and results_dict['risk_ratio_p'] > 0.05):
+        return False
+    elif (not results_dict['risk_ratio_p'] and results_dict['odds_ratio_p'] and results_dict['odds_ratio_p'] > 0.05):
         return False
     elif not results_dict['ind_var'] or not results_dict['dep_var']:
         return False
@@ -209,15 +213,31 @@ def process_pdf(doc_path):
         'number_of_subjects_studied': method_result['Number of Subjects Studied'],
     }
 
+    if isinstance(result_result['Risk Ratio p value'], str):
+        rr_pvalue = float(re.sub("[^\d\.]", "", result_result['Risk Ratio p value']))
+    elif isinstance(result_result['Risk Ratio p value'], float):
+        rr_pvalue = result_result['Risk Ratio p value']
+    else:
+        rr_pvalue = None
+
+    if isinstance(result_result['Odds Ratio p value'], str):
+        or_pvalue = float(re.sub("[^\d\.]", "", result_result['Odds Ratio p value']))
+    elif isinstance(result_result['Odds Ratio p value'], float):
+        or_pvalue = result_result['Odds Ratio p value']
+    else:
+        or_pvalue = None
+
     adjusted_results = {
         'conclusion': result_result['Conclusion'],
         'risk_ratio_value': float(result_result['Risk Ratio']),
         'odds_ratio_value': float(result_result['Odds Ratio']),
-        'risk_ratio_p': float(result_result['Risk Ratiop p value']),
-        'odds_ratio_p': float(result_result['Odds Ratio p value']),
+        'risk_ratio_p': rr_pvalue,
+        'odds_ratio_p': or_pvalue,
     }
 
     results = doc_metadata | adjusted_methods | adjusted_results
+    relevance = meta_analysis_relevance(results)
+    results['relevance'] = relevance
 
     return results
 
@@ -250,10 +270,5 @@ def main():
     #insert_results(results)
 
     #extract_html_from_url(TEST_URLS[5])
-
-
-
-
-
 
 main()
