@@ -177,6 +177,10 @@ def insert_results(results):
 
     cursor.execute(sql, list(results.values()))
     mydb.commit()
+
+    print(cursor.lastrowid)
+
+    cursor.close()
     mydb.close()
 
 

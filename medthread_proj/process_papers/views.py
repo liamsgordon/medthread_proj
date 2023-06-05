@@ -1,4 +1,4 @@
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 import ast
 import re
@@ -23,7 +23,8 @@ def home_page(request):
     if request.method == 'POST' and request.FILES.get('myfile'):
         pdf = request.FILES['myfile']
         results = process_pdf(RESEARCH_DIR + str(pdf))
-        print(results)
+        insert_id = insert_results(results)
+        return redirect('paper-summary/' + str(insert_id) + '/')
 
     return render(request, 'home.html')
 
@@ -76,9 +77,11 @@ def paper_summary(request, id):
 
     return render(request, 'view_paper.html', html_objects)
 
+
 ####################
 # HELPER FUNCTIONS #
 ####################
+
 
 def extract_pdf_data(doc_path):
     with fitz.open(doc_path) as doc:  # open document
@@ -202,10 +205,9 @@ def conn():
     mydb = mysql.connector.connect(
         host="127.0.0.1",
         user="root",
-        password='liam1521',
+        password=LOCAL_PW,
         database="medthread"
     )
-
     return mydb
 
 
@@ -222,8 +224,12 @@ def insert_results(results):
     """
 
     cursor.execute(sql, list(results.values()))
+    insert_id = cursor.lastrowid
     mydb.commit()
+    cursor.close()
     mydb.close()
+
+    return insert_id
 
 
 def meta_analysis_relevance(results_dict):
