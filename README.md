@@ -142,3 +142,8 @@ The third significant decision involved choosing the appropriate platform to pre
 
 ### Consideration: Building a Language Model
 I contemplated creating a custom Language Model (LLM), but after considering the time required (approximately 1-2 months), I decided it would be more efficient to use established models for this project. This would allow me to focus on data combing and problem-solving, rather than dedicating extensive time to the creation and refinement of a new LLM.
+
+
+Also my intial analysis is at this link
+
+https://docs.google.com/spreadsheets/d/1eM_vM2mgC2_8xVswopAaSrrA2OlLsKCXWQaFbgFWER8/edit?usp=sharing
