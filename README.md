@@ -24,6 +24,41 @@ Our hope is that this application will help facilitate a deeper understanding of
 
 
 
+## How to Use This Project
+
+Follow the steps below to set up and run this project locally:
+
+1. **Setup SQL Server**: Ensure that your SQL server is up and running, and is properly connected to Django in the `settings.py` file.
+
+2. **Navigate to Project Directory**: Move into the project directory via the command line.
+
+3. **Activate Virtual Environment**: If you're using a virtual environment, activate it with the following command:
+    ```
+    source venv/bin/activate
+    ```
+
+4. **Start the Server**: Start the Django development server with the following command:
+    ```
+    python3 manage.py runserver
+    ```
+
+5. **Open Dev Server**: Navigate to the development server in your web browser. The default URL is:
+    ```
+    http://127.0.0.1:8000/
+    ```
+
+6. **Add Research Papers**: Add your research papers to the following directory:
+    ```
+    /medthread_proj/medthread_proj/process_papers/research
+    ```
+
+7. **Use the Application**: Now you can use the application! Choose the files you wish to process in the research directory.
+
+
+
+
+
+
 ## Pages
 
 
@@ -84,4 +119,26 @@ CREATE TABLE ResearchArticle (
 This SQL data is grabbed by the `dashboard/` and `paper-summary/<int:id>/`
 
 
+## Project Reflections
 
+During the course of this project, I encountered several challenges and decision points, which are highlighted below:
+
+### Problem 1: Data Points Extraction
+The primary challenge was deciding which data points to extract, particularly from the methods section of the research papers. The varied nature of the studies posed a complexity in standardizing the extraction process. A possible solution might be to compile a summary of methods and results to capture the broad array of methodologies employed.
+
+### Problem 2: Model Selection for Text Analysis
+The second major decision was choosing the model for text analysis. I considered several models, including:
+* Atila
+* OpenAI
+* Cohere
+* Plnia
+
+Ultimately, I decided to use ChatGPT due to its ease of use and cost-effectiveness.
+
+In addition, I also chose to utilize text-davinci-003 for specific tasks that required a more comprehensive understanding and generation of text.
+
+### Problem 3: Platform for Data Results
+The third significant decision involved choosing the appropriate platform to present the data results. To streamline the development process and reduce time spent, I opted to use a tech stack with which I was already familiar.
+
+### Consideration: Building a Language Model
+I contemplated creating a custom Language Model (LLM), but after considering the time required (approximately 1-2 months), I decided it would be more efficient to use established models for this project. This would allow me to focus on data combing and problem-solving, rather than dedicating extensive time to the creation and refinement of a new LLM.
