@@ -29,18 +29,15 @@ Our hope is that this application will help facilitate a deeper understanding of
 
 #### Main Page
 
-![image info](/imgs/Screenshot 2023-06-05 at 3.40.58 AM.png)
-![image info](/imgs/Screenshot 2023-06-05 at 3.42.04 AM.png)
-![image info](/imgs/Screenshot 2023-06-05 at 3.42.32 AM.png)
+![Alt text](https://raw.githubusercontent.com/liamsgordon/medthread_proj/main/imgs/Screenshot%202023-06-05%20at%203.40.58%20AM.png)
 
 #### Dashboard
 
-
+![Alt text](https://raw.githubusercontent.com/liamsgordon/medthread_proj/main/imgs/Screenshot%202023-06-05%20at%203.42.32%20AM.png)
 
 #### Article Summary
 
-
-
+![Alt text](https://raw.githubusercontent.com/liamsgordon/medthread_proj/main/imgs/Screenshot%202023-06-05%20at%203.42.04%20AM.png)
 
 ## Documentation
 
