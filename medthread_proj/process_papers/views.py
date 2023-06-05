@@ -13,11 +13,27 @@ RESEARCH_DIR = str(Path(__file__).resolve().parent) + '/research/'
 
 
 def say_hello(request):
+    """
+    This function returns a simple "Hello World" message.
+    """
     return HttpResponse('Hello World')
 
 
 def home_page(request):
+    """
+    This function renders the home page.
+
+    Args:
+        request (HttpRequest): The request object.
+
+    Returns:
+        HttpResponse: A response object containing the rendered home page.
+    """
     if request.method == 'POST' and request.FILES.get('myfile'):
+        """
+        This code block checks if the request method is POST and if the request contains a file named `myfile`.
+        If both of these conditions are met, the file is processed using the `process_pdf()` function.
+        """
         pdf = request.FILES['myfile']
         results = process_pdf(RESEARCH_DIR + str(pdf))
         insert_id = insert_results(results)
@@ -27,12 +43,22 @@ def home_page(request):
 
 
 def dashboard(request):
+    """
+    This function renders the dashboard.
+
+    Args:
+        request (HttpRequest): The request object.
+
+    Returns:
+        HttpResponse: A response object containing the rendered dashboard.
+    """
     mydb = conn()
     cursor = mydb.cursor()
     cursor.execute('SELECT title, year_pub, ind_var, dep_var, conclusion, relevance, id FROM ResearchArticle;')
     dashboard = []
     for row in cursor:
         row = list(row)
+        # turns boolean integer into High vs Low
         if row[5] == 1:
             row[5] = 'High'
         else:
@@ -47,6 +73,16 @@ def dashboard(request):
 
 
 def paper_summary(request, id):
+    """
+    This function renders the paper summary page.
+
+    Args:
+        request (HttpRequest): The request object.
+        id (int): The ID of the paper to be summarized.
+
+    Returns:
+        HttpResponse: A response object containing the rendered paper summary page.
+    """
     mydb = conn()
     cursor = mydb.cursor()
     cursor.execute('SELECT * FROM ResearchArticle WHERE id = {};'.format(id))
@@ -81,12 +117,23 @@ def paper_summary(request, id):
 
 
 def extract_pdf_data(doc_path):
+    """
+    This function extracts metadata and text from a PDF file.
+
+    Args:
+        doc_path (str): The path to the PDF file.
+
+    Returns:
+        metadata (dict): A dictionary containing the metadata of the PDF file.
+        text (str): The text of the PDF file.
+    """
     with fitz.open(doc_path) as doc:  # open document
         doc_metadata = doc.metadata
         title = doc_metadata.get('title')
         author = doc_metadata.get('author')
         date_time_str = doc_metadata.get('creationDate')
         year = date_time_str[2:6]
+        # metadata has been grabbed, is not always reliable
 
         doc_metadata = {'title': title, 'author': author, 'year_pub': year}
 
@@ -101,6 +148,17 @@ def extract_pdf_data(doc_path):
 
 
 def match_text_chunks(pages):
+    """
+    This function matches text chunks in a string.
+
+    Args:
+        text (str): The string to search.
+
+    Returns:
+        method_sentences (list): A list of sentences that contain the keyword "Methods".
+        result_sentences (list): A list of sentences that contain the keyword "Results".
+    """
+    # these regexs tell us when to start and stop different sentences
     re_key_words_method = r'\n\s*((MATERIALS AND METHODS)|(MATERIALS AND METHODS)|(METHODS)|(Subjects and methods))\s*\n'
     re_key_words_results = r'\n\s*((CONCLUSIONS)|(RESULTS)|(Results)|(Conclusions and relevance))(\:)?\n\s*'
     re_section_break = r'\n\s*(([A-Z]{5,10}){1,3})|(References)|(Discussion)|(Methods)|(Results)(\:)?\s*\n'
@@ -109,11 +167,15 @@ def match_text_chunks(pages):
     result_sentences = []
     method_stop, result_stop = True, True
 
+    # we have sentences we want to loop through so we can group paragraphs on a sentence level
     sentences = pages.split('.')
     for sentence in sentences:
         re_method = re.search(re_key_words_method, sentence)
+        # these three if statements stop the adding to our method sentences once we see the results or
+        # heaven forbid the discussion sections. We add sentences otherwise.
         if method_stop is False and re.search(re_section_break, sentence):
             method_stop = True
+        # this just makes sure we dont skip a methods section if there is a mini one in the abstract
         if method_stop is True and re_method:
             method_stop = False
         if method_stop is False:
@@ -121,6 +183,7 @@ def match_text_chunks(pages):
 
         re_result = re.search(re_key_words_results, sentence)
 
+        # this code does the same thing except for the results section
         if result_stop is False and re.search(re_section_break, sentence):
             result_stop = True
         if result_stop is True and re_result:
@@ -128,6 +191,8 @@ def match_text_chunks(pages):
         if result_stop is False:
             result_sentences.append(sentence)
 
+    # because of tables, the results sections can be too big so basically if we
+    # have a sentence which is more than 4 lines then we assume its a table and we remove the sentence
     new_result_sentences = []
     for sentence in result_sentences:
         num_lines = len(sentence.split('\n'))
@@ -142,6 +207,15 @@ def match_text_chunks(pages):
 
 
 def chatGPT_extract_methods(methods_text):
+    """
+    This function extracts methods from a text string using OpenAI's ChatGPT API.
+
+    Args:
+        methods_text (str): The text to extract methods from.
+
+    Returns:
+        methods (dict): A dictionary containing the methods extracted from the text.
+    """
     openai.api_key = CHAT_GPT_KEY
 
     response = openai.Completion.create(
@@ -161,6 +235,15 @@ def chatGPT_extract_methods(methods_text):
 
 
 def chatGPT_extract_results(results_text):
+    """
+    This function extracts results from a text string using OpenAI's ChatGPT API.
+
+    Args:
+        results_text (str): The text to extract results from.
+
+    Returns:
+        results (dict): A dictionary containing the results extracted from the text.
+    """
     openai.api_key = CHAT_GPT_KEY
 
     response = openai.Completion.create(
@@ -180,6 +263,16 @@ def chatGPT_extract_results(results_text):
 
 
 def chatGPT_test_IV_DV(ind_var, dep_var):
+    """
+    This function tests if a given independent variable (IV) and dependent variable (DV) are relevant for a meta-analysis.
+
+    Args:
+        ind_var (str): The independent variable.
+        dep_var (str): The dependent variable.
+
+    Returns:
+        bool: True if the IV and DV are relevant, False otherwise.
+    """
     openai.api_key = CHAT_GPT_KEY
 
     response = openai.Completion.create(
@@ -199,6 +292,12 @@ def chatGPT_test_IV_DV(ind_var, dep_var):
 
 
 def conn():
+    """
+    This function establishes a connection to the MySQL database `medthread`.
+
+    Returns:
+        mydb (mysql.connector.connection): A connection to the MySQL database `medthread`.
+    """
     mydb = mysql.connector.connect(
         host="127.0.0.1",
         user="root",
@@ -209,6 +308,15 @@ def conn():
 
 
 def insert_results(results):
+    """
+    This function inserts a set of results into the MySQL database `medthread`.
+
+    Args:
+        results (dict): A dictionary containing the results to be inserted.
+
+    Returns:
+        insert_id (int): The ID of the row that was inserted.
+    """
     mydb = conn()
     cursor = mydb.cursor()
 
@@ -230,29 +338,53 @@ def insert_results(results):
 
 
 def meta_analysis_relevance(results_dict):
+    """
+    This function determines if a given set of results is relevant for a meta-analysis.
+
+    Args:
+        results_dict (dict): A dictionary containing the results of a study.
+
+    Returns:
+        bool: True if the results are relevant, False otherwise.
+    """
+    # if we cannot find any statistical conclusions, this paper is not relevant
     if not results_dict['risk_ratio_value'] and not results_dict['odds_ratio_value']:
         return False
-    elif not results_dict['risk_ratio_p'] and not results_dict['odds_ratio_p']:
-        return False
+    # also if the p values show insignificance
     elif (results_dict['risk_ratio_p'] and not results_dict['odds_ratio_p'] and results_dict['risk_ratio_p'] > 0.05):
         return False
     elif (not results_dict['risk_ratio_p'] and results_dict['odds_ratio_p'] and results_dict['odds_ratio_p'] > 0.05):
         return False
+    # if we cannot find the ind. var and dep. var
     elif not results_dict['ind_var'] or not results_dict['dep_var']:
         return False
+    # test if these are the IVs and DVs we are looking for
     return chatGPT_test_IV_DV(results_dict['ind_var'], results_dict['dep_var'])
 
 
 def process_pdf(doc_path):
+    """
+    This function processes a PDF file and returns a dictionary containing the extracted metadata, methods, and results.
+
+    Args:
+        doc_path (str): The path to the PDF file.
+
+    Returns:
+        results (dict): A dictionary containing the extracted metadata, methods, and results.
+    """
+    # Extract the metadata from the PDF file.
     pages, doc_metadata = extract_pdf_data(doc_path)
     result_sentences, method_sentences = match_text_chunks(pages)
 
+    # Extract the methods and results from the PDF file
     method_related_extracts = chatGPT_extract_methods(method_sentences)
     result_related_extracts = chatGPT_extract_results(result_sentences)
 
+    # Convert the extracted methods and results to dictionaries.
     method_result = ast.literal_eval(method_related_extracts)
     result_result = ast.literal_eval(result_related_extracts)
 
+    # Adjust the extracted methods dictionary.
     adjusted_methods = {
         'study_design': method_result['Study Design'],
         'method_of_talcum_powder_exposure_measurement': method_result['Method of Talcum Powder Exposure Measurement'],
@@ -262,6 +394,7 @@ def process_pdf(doc_path):
         'number_of_subjects_studied': method_result['Number of Subjects Studied'],
     }
 
+    # Adjust the extracted results dictionary.
     if isinstance(result_result['Risk Ratio p value'], str):
         rr_pvalue = float(re.sub("[^\d\.]", "", result_result['Risk Ratio p value']))
     elif isinstance(result_result['Risk Ratio p value'], float):
@@ -284,7 +417,9 @@ def process_pdf(doc_path):
         'odds_ratio_p': or_pvalue,
     }
 
+    # Combine the metadata, methods, and results into a single dictionary.
     results = doc_metadata | adjusted_methods | adjusted_results
+    # Determine the relevance of the results.
     relevance = meta_analysis_relevance(results)
     results['relevance'] = relevance
 
