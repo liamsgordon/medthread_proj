@@ -29,9 +29,9 @@ Our hope is that this application will help facilitate a deeper understanding of
 
 #### Main Page
 
-![image info](./imgs/Screenshot 2023-06-05 at 3.40.58 AM.png)
-![image info](./imgs/Screenshot 2023-06-05 at 3.42.04 AM.png)
-![image info](./imgs/Screenshot 2023-06-05 at 3.42.32 AM.png)
+![image info](/imgs/Screenshot 2023-06-05 at 3.40.58 AM.png)
+![image info](/imgs/Screenshot 2023-06-05 at 3.42.04 AM.png)
+![image info](/imgs/Screenshot 2023-06-05 at 3.42.32 AM.png)
 
 #### Dashboard
 
