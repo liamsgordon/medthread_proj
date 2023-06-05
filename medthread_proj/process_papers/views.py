@@ -3,12 +3,9 @@ from django.shortcuts import redirect, render
 import ast
 import re
 import fitz
-import os
 import openai
 import mysql.connector
 from pathlib import Path
-from bs4 import BeautifulSoup
-import requests
 
 from .local_secrets import LOCAL_PW, CHAT_GPT_KEY
 

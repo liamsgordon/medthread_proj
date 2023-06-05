@@ -7,19 +7,7 @@ import mysql.connector
 from bs4 import BeautifulSoup
 import requests
 
-
 from secrets import CHAT_GPT_KEY
-
-
-TEST_URLS = [
-'https://acsjournals.onlinelibrary.wiley.com/doi/10.1002/(SICI)1097-0142(19970615)79:12%3C2396::AID-CNCR15%3E3.0.CO;2-M',
-'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2247100/pdf/brjcancer00120-0090.pdf',
-'https://onlinelibrary.wiley.com/doi/full/10.1002/ijc.20434',
-'https://acsjournals.onlinelibrary.wiley.com/doi/10.1002/%28SICI%291097-0142%2819970615%2979%3A12%3C2396%3A%3AAID-CNCR15%3E3.0.CO%3B2-M',
-'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4820665/',
-'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9360263/',
-'https://pubmed.ncbi.nlm.nih.gov/31910280/',
-]
 
 
 TEST_PDFS = [
@@ -61,10 +49,14 @@ def match_text_chunks(pages):
 
     method_sentences = []
     result_sentences = []
-    method_stop, result_stop = True, True
+    abstract_sentences = []
+    method_stop, result_stop, count_sentences = True, True, 0
 
     sentences = pages.split('.')
     for sentence in sentences:
+        if count_sentences < 25:
+            abstract_sentences.append(sentence)
+        count_sentences += 1
         re_method = re.search(re_key_words_method, sentence)
         if method_stop is False and re.search(re_section_break, sentence):
             method_stop = True
@@ -90,9 +82,59 @@ def match_text_chunks(pages):
 
     result_sentences = ' '.join(new_result_sentences)
     method_sentences = ' '.join(method_sentences)
+    abstract_sentences = ' '.join(abstract_sentences)
 
 
-    return result_sentences, method_sentences
+    return result_sentences, method_sentences, abstract_sentences
+
+
+def chatGPT_extract_abstract(abstract_text):
+    openai.api_key = CHAT_GPT_KEY
+
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt="""Q:In this text passage which is a scientific methods description,
+         return a python dictionary for the author, title, year published,
+         Dependant variable, Independant Variable
+         """ + abstract_text + " \nA:",
+        temperature=0,
+        max_tokens=750,
+        top_p=1,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+    )
+
+    return response["choices"][0]["text"]
+
+
+def conn():
+    mydb = mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password='liam1521',
+        database="medthread"
+    )
+
+    return mydb
+
+
+def extract_html_from_url(url):
+    req = requests.get(url, 'html.parser', headers={
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'})
+    if req.status_code == 200:
+        # Get the content of the response
+        page_content = req.content
+
+        # Create a BeautifulSoup object and specify the parser
+        soup = BeautifulSoup(page_content, 'html.parser')
+        # Find the section element with role='document'
+
+        text = soup.findAll(text=True)
+        text_block = ' '.join(text)
+
+        print(text_block)
+    else:
+        print("Failed to retrieve the URL")
 
 
 def chatGPT_extract_methods(methods_text):
@@ -156,10 +198,9 @@ def conn():
     mydb = mysql.connector.connect(
         host="127.0.0.1",
         user="root",
-        password='liam1521',
+        password=LOCAL_PW,
         database="medthread"
     )
-
     return mydb
 
 
@@ -176,12 +217,12 @@ def insert_results(results):
     """
 
     cursor.execute(sql, list(results.values()))
+    insert_id = cursor.lastrowid
     mydb.commit()
-
-    print(cursor.lastrowid)
-
     cursor.close()
     mydb.close()
+
+    return insert_id
 
 
 def meta_analysis_relevance(results_dict):
@@ -199,14 +240,25 @@ def meta_analysis_relevance(results_dict):
 
 
 def process_pdf(doc_path):
-    pages, doc_metadata = extract_pdf_data(doc_path)
-    result_sentences, method_sentences = match_text_chunks(pages)
+    pages, _ = extract_pdf_data(doc_path)
+    result_sentences, method_sentences, abstract_sentences = match_text_chunks(pages)
 
+
+    abstract_related_extracts = chatGPT_extract_abstract(abstract_sentences)
     method_related_extracts = chatGPT_extract_methods(method_sentences)
     result_related_extracts = chatGPT_extract_results(result_sentences)
 
     method_result = ast.literal_eval(method_related_extracts)
     result_result = ast.literal_eval(result_related_extracts)
+    abstract_result = ast.literal_eval(abstract_related_extracts)
+
+    adjusted_abstract = {
+        'author': abstract_result['Author'],
+        'title': abstract_result['Title'],
+        'year_pub': abstract_result['Year Published'],
+        'dep_var': abstract_result['Dependant Variable'],
+        'ind_var': abstract_result['Independant Variable'],
+    }
 
     adjusted_methods = {
         'study_design': method_result['Study Design'],
@@ -239,34 +291,15 @@ def process_pdf(doc_path):
         'odds_ratio_p': or_pvalue,
     }
 
-    results = doc_metadata | adjusted_methods | adjusted_results
+    results = adjusted_abstract | adjusted_methods | adjusted_results
     relevance = meta_analysis_relevance(results)
     results['relevance'] = relevance
 
     return results
 
 
-def extract_html_from_url(url):
-    req = requests.get(url, 'html.parser', headers={
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'})
-    if req.status_code == 200:
-        # Get the content of the response
-        page_content = req.content
-
-        # Create a BeautifulSoup object and specify the parser
-        soup = BeautifulSoup(page_content, 'html.parser')
-        # Find the section element with role='document'
-
-        text = soup.findAll(text=True)
-        text_block = ' '.join(text)
-
-        print(text_block)
-    else:
-        print("Failed to retrieve the URL")
-
-
 def main():
-    doc_path = PDF_FOLDER + '/' + TEST_PDFS[0]
+    doc_path = PDF_FOLDER + '/' + TEST_PDFS[2]
     results = process_pdf(doc_path)
 
     print(results)
