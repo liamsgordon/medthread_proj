@@ -9,7 +9,7 @@ The application performs the following key functions:
 1. Processes PDFs of research papers
 2. Analyzes the content of the papers
 3. Determines the relevance of the paper to the hypothesis
-4. Evaluates the usefulness of the paper based on a variety of factors
+4. Summarizes the paper from methods and results section
 
 
 ## Built With
@@ -29,7 +29,9 @@ Our hope is that this application will help facilitate a deeper understanding of
 
 #### Main Page
 
-
+![image info](./imgs/Screenshot 2023-06-05 at 3.40.58 AM.png)
+![image info](./imgs/Screenshot 2023-06-05 at 3.42.04 AM.png)
+![image info](./imgs/Screenshot 2023-06-05 at 3.42.32 AM.png)
 
 #### Dashboard
 
