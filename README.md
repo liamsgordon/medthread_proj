@@ -1,5 +1,3 @@
-This Project is for the MedThread Interview Process
-
 # Talcum-Cancer Analysis Web App
 
 This web application is designed to process and analyze research papers related to the effects of talcum on cancer. The primary purpose of the app is to assess the relevance and usefulness of each paper in understanding the given hypothesis, based on a range of factors.
